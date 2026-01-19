@@ -26,7 +26,7 @@ export class PlayNoteHelper {
         const sustainLevel = Number(adsr.sustainLevel);
         const releaseTime = Number(adsr.releaseTime);
         const duration = attackTime + decayTime + releaseTime;
-        if (nowReleased >= noteStartTime) {
+        if (nowReleased >= noteStartTime + attackTime + decayTime) {
             console.log("Hello");
             console.log(nowReleased);
             noteGain.gain.setValueAtTime(sustainLevel, nowReleased + duration - releaseTime);

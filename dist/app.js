@@ -83,13 +83,13 @@ document.body.appendChild(kickButton);
 
 
 */
-let attackTimeInput = document.querySelector("#attackTime");
-let decayTimeInput = document.querySelector("#decayTime");
-let sustainLevelInput = document.querySelector("#sustainLevel");
-let releaseTimeInput = document.querySelector("#releaseTime");
 const analyserAll = audioContext.createAnalyser();
 analyserHelper.createOscilloscope(analyserAll);
 function createPlayNoteKeyEventLister(keyCode, frequency) {
+    let attackTimeInput = document.querySelector("#attackTime");
+    let decayTimeInput = document.querySelector("#decayTime");
+    let sustainLevelInput = document.querySelector("#sustainLevel");
+    let releaseTimeInput = document.querySelector("#releaseTime");
     const analyser = audioContext.createAnalyser();
     analyserHelper.createOscilloscope(analyser);
     let adsr = {
@@ -102,6 +102,12 @@ function createPlayNoteKeyEventLister(keyCode, frequency) {
     let noteOscillator = audioContext.createOscillator();
     let now = audioContext.currentTime;
     document.body.addEventListener("keydown", (e) => {
+        let adsr = {
+            attackTime: +attackTimeInput.value,
+            decayTime: +decayTimeInput.value,
+            sustainLevel: +sustainLevelInput.value,
+            releaseTime: +releaseTimeInput.value,
+        };
         if (e.code === keyCode) {
             if (e.repeat) {
                 return;
@@ -116,6 +122,12 @@ function createPlayNoteKeyEventLister(keyCode, frequency) {
         }
     });
     document.body.addEventListener("keyup", (e) => {
+        let adsr = {
+            attackTime: +attackTimeInput.value,
+            decayTime: +decayTimeInput.value,
+            sustainLevel: +sustainLevelInput.value,
+            releaseTime: +releaseTimeInput.value,
+        };
         if (e.code === keyCode) {
             noteHelper.stopNote(audioContext, noteGain, noteOscillator, adsr, now);
         }

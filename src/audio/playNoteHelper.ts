@@ -48,7 +48,7 @@ export class PlayNoteHelper {
     const releaseTime: number = Number(adsr.releaseTime);
     const duration = attackTime + decayTime + releaseTime;
 
-    if (nowReleased >= noteStartTime) {
+    if (nowReleased >= noteStartTime + attackTime + decayTime) {
       console.log("Hello");
       console.log(nowReleased);
 
