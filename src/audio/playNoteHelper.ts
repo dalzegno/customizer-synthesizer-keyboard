@@ -6,7 +6,9 @@ export class PlayNoteHelper {
     frequency: number,
     adsr: ADSR,
   ): [GainNode, OscillatorNode] {
+    console.log("Yo");
     const now = audioContext.currentTime;
+    console.log(now);
     const noteOscillator = audioContext.createOscillator();
     noteOscillator.type = "sine";
     noteOscillator.frequency.setValueAtTime(frequency, now);
@@ -39,26 +41,31 @@ export class PlayNoteHelper {
     noteStartTime: number,
   ) {
     const nowReleased = audioContext.currentTime;
+
     const attackTime: number = Number(adsr.attackTime);
     const decayTime: number = Number(adsr.decayTime);
     const sustainLevel: number = Number(adsr.sustainLevel);
     const releaseTime: number = Number(adsr.releaseTime);
     const duration = attackTime + decayTime + releaseTime;
 
-    if (nowReleased > noteStartTime + attackTime + decayTime) {
+    if (nowReleased >= noteStartTime) {
+      console.log("Hello");
+      console.log(nowReleased);
+
       noteGain.gain.setValueAtTime(
         sustainLevel,
-        noteStartTime + duration - releaseTime,
+        nowReleased + duration - releaseTime,
       );
-      noteGain.gain.linearRampToValueAtTime(0, noteStartTime + releaseTime);
-      noteOscillator.stop(noteStartTime + releaseTime);
+      noteGain.gain.linearRampToValueAtTime(0, nowReleased + releaseTime);
+      noteOscillator.stop(nowReleased + releaseTime + 0.1);
     } else {
+      console.log("what");
       noteGain.gain.setValueAtTime(
         sustainLevel,
         noteStartTime + duration - releaseTime,
       );
       noteGain.gain.linearRampToValueAtTime(0, noteStartTime + duration);
-      noteOscillator.stop(nowReleased + duration);
+      noteOscillator.stop(noteStartTime + duration);
     }
   }
 }

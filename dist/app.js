@@ -13,25 +13,31 @@ const channelData = buffer.getChannelData(0);
 for (let i = 0; i < buffer.length; i++) {
     channelData[i] = Math.random() * 2 - 1;
 }
+const primaryGainControl = audioContext.createGain();
+primaryGainControl.gain.setValueAtTime(0.5, 0);
+primaryGainControl.connect(audioContext.destination);
 /*
 
 
- */
+*/
 //#region intro
+/*
 const whiteNoiseSource = audioContext.createBufferSource();
 whiteNoiseSource.buffer = buffer;
-const primaryGainControl = audioContext.createGain();
-primaryGainControl.gain.setValueAtTime(0.5, 0);
+
+
 whiteNoiseSource.connect(primaryGainControl);
-primaryGainControl.connect(audioContext.destination);
 const button = document.createElement("button");
 button.innerText = "White Noise";
+
 button.addEventListener("click", () => {
-    const whiteNoiseSource = audioContext.createBufferSource();
-    whiteNoiseSource.buffer = buffer;
-    whiteNoiseSource.connect(primaryGainControl);
-    whiteNoiseSource.start();
+  const whiteNoiseSource = audioContext.createBufferSource();
+  whiteNoiseSource.buffer = buffer;
+  whiteNoiseSource.connect(primaryGainControl);
+
+  whiteNoiseSource.start();
 });
+
 document.body.appendChild(button);
 /*
 document.body.addEventListener("keyup", (e) => {
@@ -43,67 +49,75 @@ document.body.addEventListener("keyup", (e) => {
     whiteNoiseSource.start();
   }
 }); */
+/*
 const snareFilter = audioContext.createBiquadFilter();
 snareFilter.type = "highpass";
 snareFilter.frequency.value = 1500; // Measured in Hz
 snareFilter.connect(primaryGainControl);
+
 // ...
 const snareButton = document.createElement("button");
 snareButton.innerText = "Snare";
 snareButton.addEventListener("click", () => {
-    const whiteNoiseSource = audioContext.createBufferSource();
-    whiteNoiseSource.buffer = buffer;
-    whiteNoiseSource.connect(snareFilter);
-    whiteNoiseSource.start();
+  const whiteNoiseSource = audioContext.createBufferSource();
+  whiteNoiseSource.buffer = buffer;
+  whiteNoiseSource.connect(snareFilter);
+
+  whiteNoiseSource.start();
 });
 document.body.appendChild(snareButton);
+
 const kickButton = document.createElement("button");
 kickButton.innerText = "Kick";
 kickButton.addEventListener("click", () => {
-    const kickOscillator = audioContext.createOscillator();
-    // Frequency in Hz. This corresponds to a C note.
-    kickOscillator.frequency.setValueAtTime(442, 0);
-    kickOscillator.connect(primaryGainControl);
-    kickOscillator.start();
+  const kickOscillator = audioContext.createOscillator();
+  // Frequency in Hz. This corresponds to a C note.
+  kickOscillator.frequency.setValueAtTime(442, 0);
+  kickOscillator.connect(primaryGainControl);
+  kickOscillator.start();
 });
 document.body.appendChild(kickButton);
-let attackTimeInput = document.querySelector("#attackTime");
-let decayTimeInput = document.querySelector("#decayTime");
-let sustainLevelInput = document.querySelector("#sustainLevel");
-let releaseTimeInput = document.querySelector("#releaseTime");
+*/
 //#endregion
 /*
 
 
- */
+*/
+let attackTimeInput = document.querySelector("#attackTime");
+let decayTimeInput = document.querySelector("#decayTime");
+let sustainLevelInput = document.querySelector("#sustainLevel");
+let releaseTimeInput = document.querySelector("#releaseTime");
 const analyserAll = audioContext.createAnalyser();
 analyserHelper.createOscilloscope(analyserAll);
-function createPlayNoteKeyDownEventLister(keyCode, frequency) {
+function createPlayNoteKeyEventLister(keyCode, frequency) {
     const analyser = audioContext.createAnalyser();
     analyserHelper.createOscilloscope(analyser);
+    let adsr = {
+        attackTime: +attackTimeInput.value,
+        decayTime: +decayTimeInput.value,
+        sustainLevel: +sustainLevelInput.value,
+        releaseTime: +releaseTimeInput.value,
+    };
+    let noteGain = audioContext.createGain();
+    let noteOscillator = audioContext.createOscillator();
+    let now = audioContext.currentTime;
     document.body.addEventListener("keydown", (e) => {
         if (e.code === keyCode) {
             if (e.repeat) {
                 return;
             }
-            let adsr = {
-                attackTime: +attackTimeInput.value,
-                decayTime: +decayTimeInput.value,
-                sustainLevel: +sustainLevelInput.value,
-                releaseTime: +releaseTimeInput.value,
-            };
-            const now = audioContext.currentTime;
+            now = audioContext.currentTime;
             let noteGainAndOscillator = noteHelper.startNote(audioContext, frequency, adsr);
-            let noteGain = noteGainAndOscillator[0];
-            let noteOscillator = noteGainAndOscillator[1];
+            noteGain = noteGainAndOscillator[0];
+            noteOscillator = noteGainAndOscillator[1];
             noteOscillator.connect(analyser);
             noteOscillator.connect(analyserAll);
             noteGain.connect(primaryGainControl);
-            document.body.addEventListener("keyup", (e) => {
-                if (e.code === keyCode) {
-                    noteHelper.stopNote(audioContext, noteGain, noteOscillator, adsr, now);
-                }
-            });
+        }
+    });
+    document.body.addEventListener("keyup", (e) => {
+        if (e.code === keyCode) {
+            noteHelper.stopNote(audioContext, noteGain, noteOscillator, adsr, now);
         }
     });
 }
@@ -142,7 +156,7 @@ let startFrequency = 216;
 let i = 0;
 for (const key of keys) {
     let frequency = startFrequency * ratios[i];
-    createPlayNoteKeyDownEventLister(key, frequency);
+    createPlayNoteKeyEventLister(key, frequency);
     i++;
 }
 /* const analyser = audioContext.createAnalyser();

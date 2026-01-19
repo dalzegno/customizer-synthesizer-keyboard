@@ -1,6 +1,8 @@
 export class PlayNoteHelper {
     startNote(audioContext, frequency, adsr) {
+        console.log("Yo");
         const now = audioContext.currentTime;
+        console.log(now);
         const noteOscillator = audioContext.createOscillator();
         noteOscillator.type = "sine";
         noteOscillator.frequency.setValueAtTime(frequency, now);
@@ -24,15 +26,18 @@ export class PlayNoteHelper {
         const sustainLevel = Number(adsr.sustainLevel);
         const releaseTime = Number(adsr.releaseTime);
         const duration = attackTime + decayTime + releaseTime;
-        if (nowReleased > noteStartTime + attackTime + decayTime) {
-            noteGain.gain.setValueAtTime(sustainLevel, noteStartTime + duration - releaseTime);
-            noteGain.gain.linearRampToValueAtTime(0, noteStartTime + releaseTime);
-            noteOscillator.stop(noteStartTime + releaseTime);
+        if (nowReleased >= noteStartTime) {
+            console.log("Hello");
+            console.log(nowReleased);
+            noteGain.gain.setValueAtTime(sustainLevel, nowReleased + duration - releaseTime);
+            noteGain.gain.linearRampToValueAtTime(0, nowReleased + releaseTime);
+            noteOscillator.stop(nowReleased + releaseTime + 0.1);
         }
         else {
+            console.log("what");
             noteGain.gain.setValueAtTime(sustainLevel, noteStartTime + duration - releaseTime);
             noteGain.gain.linearRampToValueAtTime(0, noteStartTime + duration);
-            noteOscillator.stop(nowReleased + duration);
+            noteOscillator.stop(noteStartTime + duration);
         }
     }
 }
