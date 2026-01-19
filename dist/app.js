@@ -1,6 +1,7 @@
-import Hello from "./hello.js";
-let hello = new Hello();
-hello.helloWorld();
+import { Analyser } from "./analyser/analyserHelper.js";
+import { PlayNoteHelper } from "./audio/playNoteHelper.js";
+const analyserHelper = new Analyser();
+const noteHelper = new PlayNoteHelper();
 //#region Load Audio Context stuff
 const audioContext = new AudioContext();
 const SAMPLE_RATE = audioContext.sampleRate;
@@ -12,6 +13,11 @@ const channelData = buffer.getChannelData(0);
 for (let i = 0; i < buffer.length; i++) {
     channelData[i] = Math.random() * 2 - 1;
 }
+/*
+
+
+ */
+//#region intro
 const whiteNoiseSource = audioContext.createBufferSource();
 whiteNoiseSource.buffer = buffer;
 const primaryGainControl = audioContext.createGain();
@@ -65,58 +71,79 @@ let attackTimeInput = document.querySelector("#attackTime");
 let decayTimeInput = document.querySelector("#decayTime");
 let sustainLevelInput = document.querySelector("#sustainLevel");
 let releaseTimeInput = document.querySelector("#releaseTime");
+//#endregion
+/*
+
+
+ */
 const analyserAll = audioContext.createAnalyser();
-createOscilloscope(analyserAll);
-function playNote(keyCode, frequency) {
+analyserHelper.createOscilloscope(analyserAll);
+function createPlayNoteKeyDownEventLister(keyCode, frequency) {
     const analyser = audioContext.createAnalyser();
-    createOscilloscope(analyser);
+    analyserHelper.createOscilloscope(analyser);
     document.body.addEventListener("keydown", (e) => {
         if (e.code === keyCode) {
             if (e.repeat) {
                 return;
             }
+            let adsr = {
+                attackTime: +attackTimeInput.value,
+                decayTime: +decayTimeInput.value,
+                sustainLevel: +sustainLevelInput.value,
+                releaseTime: +releaseTimeInput.value,
+            };
             const now = audioContext.currentTime;
-            const noteOscillator = audioContext.createOscillator();
-            noteOscillator.type = "square";
-            noteOscillator.frequency.setValueAtTime(frequency, now);
-            const attackTime = +attackTimeInput.value;
-            const decayTime = +decayTimeInput.value;
-            const sustainLevel = +sustainLevelInput.value;
-            const releaseTime = +releaseTimeInput.value;
-            const duration = attackTime + decayTime + releaseTime;
-            const noteGain = audioContext.createGain();
-            noteGain.gain.setValueAtTime(0, 0);
-            noteGain.gain.linearRampToValueAtTime(1, now + attackTime);
-            noteGain.gain.linearRampToValueAtTime(sustainLevel, now + attackTime + decayTime);
-            noteOscillator.start();
-            noteOscillator.connect(noteGain);
+            let noteGainAndOscillator = noteHelper.startNote(audioContext, frequency, adsr);
+            let noteGain = noteGainAndOscillator[0];
+            let noteOscillator = noteGainAndOscillator[1];
             noteOscillator.connect(analyser);
             noteOscillator.connect(analyserAll);
             noteGain.connect(primaryGainControl);
             document.body.addEventListener("keyup", (e) => {
                 if (e.code === keyCode) {
-                    const nowReleased = audioContext.currentTime;
-                    if (nowReleased > now + attackTime + decayTime) {
-                        noteGain.gain.setValueAtTime(sustainLevel, now + duration - releaseTime);
-                        noteGain.gain.linearRampToValueAtTime(0, nowReleased + releaseTime);
-                        noteOscillator.stop(nowReleased + releaseTime);
-                    }
-                    else {
-                        noteGain.gain.setValueAtTime(sustainLevel, now + duration - releaseTime);
-                        noteGain.gain.linearRampToValueAtTime(0, now + duration);
-                        noteOscillator.stop(nowReleased + duration);
-                    }
+                    noteHelper.stopNote(audioContext, noteGain, noteOscillator, adsr, now);
                 }
             });
         }
     });
 }
-// playNote("KeyW", 420);
-const keys = ["KeyQ", "KeyW", "KeyE", "KeyR", "KeyT", "KeyY", "KeyU"];
-let startFrequency = 438;
+const keys = [
+    "KeyQ",
+    "KeyW",
+    "KeyE",
+    "KeyR",
+    "KeyT",
+    "KeyY",
+    "KeyU",
+    "KeyI",
+    "KeyO",
+    "KeyP",
+    "KeyA",
+    "KeyS",
+    "KeyD",
+];
+//just intonation ratios
+const ratios = [
+    1,
+    (1 / 15) * 16,
+    (1 / 8) * 9,
+    (1 / 5) * 6,
+    (1 / 4) * 5,
+    (1 / 3) * 4,
+    (1 / 32) * 45,
+    (1 / 2) * 3,
+    (1 / 5) * 8,
+    (1 / 3) * 5,
+    (1 / 5) * 9,
+    (1 / 8) * 15,
+    1 * 2,
+];
+let startFrequency = 216;
+let i = 0;
 for (const key of keys) {
-    playNote(key, startFrequency);
-    startFrequency += 8;
+    let frequency = startFrequency * ratios[i];
+    createPlayNoteKeyDownEventLister(key, frequency);
+    i++;
 }
 /* const analyser = audioContext.createAnalyser();
 analyser.fftSize = 2048;
@@ -165,39 +192,3 @@ draw();
 // Connect the source to be analyzed
 // source.connect(analyser);
 // Get a canvas defined with ID "oscilloscope"
-function createOscilloscope(analyser) {
-    analyser.fftSize = 2048;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    analyser.getByteTimeDomainData(dataArray);
-    const canvas = document.createElement("canvas");
-    document.body.append(canvas);
-    // const canvas = document.getElementById("oscilloscope") as HTMLCanvasElement;
-    const canvasCtx = canvas.getContext("2d");
-    // draw an oscilloscope of the current audio source
-    function draw() {
-        requestAnimationFrame(draw);
-        analyser.getByteTimeDomainData(dataArray);
-        canvasCtx.fillStyle = "rgb(200 200 200)";
-        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-        canvasCtx.lineWidth = 2;
-        canvasCtx.strokeStyle = "rgb(0 0 0)";
-        canvasCtx.beginPath();
-        const sliceWidth = (canvas.width * 1.0) / bufferLength;
-        let x = 0;
-        for (let i = 0; i < bufferLength; i++) {
-            const v = dataArray[i] / 128.0;
-            const y = (v * canvas.height) / 2;
-            if (i === 0) {
-                canvasCtx.moveTo(x, y);
-            }
-            else {
-                canvasCtx.lineTo(x, y);
-            }
-            x += sliceWidth;
-        }
-        canvasCtx.lineTo(canvas.width, canvas.height / 2);
-        canvasCtx.stroke();
-    }
-    draw();
-}
