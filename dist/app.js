@@ -1,9 +1,9 @@
 import { Analyser } from "./analyser/analyserHelper.js";
 import { PlayNoteHelper } from "./audio/playNoteHelper.js";
-const analyserHelper = new Analyser();
-const noteHelper = new PlayNoteHelper();
 //#region Load Audio Context stuff
 const audioContext = new AudioContext();
+const analyserHelper = new Analyser();
+const noteHelper = new PlayNoteHelper(audioContext);
 const SAMPLE_RATE = audioContext.sampleRate;
 console.log(SAMPLE_RATE);
 const timeLength = 1; // measured in seconds
@@ -16,6 +16,7 @@ for (let i = 0; i < buffer.length; i++) {
 const primaryGainControl = audioContext.createGain();
 primaryGainControl.gain.setValueAtTime(0.5, 0);
 primaryGainControl.connect(audioContext.destination);
+//#endregion
 /*
 
 
@@ -90,14 +91,14 @@ function createPlayNoteKeyEventLister(keyCode, frequency) {
     let decayTimeInput = document.querySelector("#decayTime");
     let sustainLevelInput = document.querySelector("#sustainLevel");
     let releaseTimeInput = document.querySelector("#releaseTime");
-    const analyser = audioContext.createAnalyser();
-    analyserHelper.createOscilloscope(analyser);
     let adsr = {
         attackTime: +attackTimeInput.value,
         decayTime: +decayTimeInput.value,
         sustainLevel: +sustainLevelInput.value,
         releaseTime: +releaseTimeInput.value,
     };
+    const analyser = audioContext.createAnalyser();
+    analyserHelper.createOscilloscope(analyser);
     let noteGain = audioContext.createGain();
     let noteOscillator = audioContext.createOscillator();
     let now = audioContext.currentTime;
@@ -113,7 +114,7 @@ function createPlayNoteKeyEventLister(keyCode, frequency) {
                 return;
             }
             now = audioContext.currentTime;
-            let noteGainAndOscillator = noteHelper.startNote(audioContext, frequency, adsr);
+            let noteGainAndOscillator = noteHelper.startNote(frequency, adsr);
             noteGain = noteGainAndOscillator[0];
             noteOscillator = noteGainAndOscillator[1];
             noteOscillator.connect(analyser);
@@ -129,7 +130,7 @@ function createPlayNoteKeyEventLister(keyCode, frequency) {
             releaseTime: +releaseTimeInput.value,
         };
         if (e.code === keyCode) {
-            noteHelper.stopNote(audioContext, noteGain, noteOscillator, adsr, now);
+            noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
         }
     });
 }
@@ -171,50 +172,147 @@ for (const key of keys) {
     createPlayNoteKeyEventLister(key, frequency);
     i++;
 }
-/* const analyser = audioContext.createAnalyser();
-analyser.fftSize = 2048;
-const bufferLength = analyser.frequencyBinCount;
-const dataArray = new Uint8Array(bufferLength);
-
-const canvas = document.querySelector(".canvas") as HTMLCanvasElement;
-const canvasCtx = canvas.getContext("2d") as CanvasRenderingContext2D;
-const WIDTH = 1000;
-const HEIGHT = 500;
-canvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
-
-
-function draw() {
-  const drawVisual = requestAnimationFrame(draw);
-  analyser.getByteTimeDomainData(dataArray);
-  // Fill solid color
-  canvasCtx.fillStyle = "rgb(200 200 200)";
-  canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
-  // Begin the path
-  canvasCtx.lineWidth = 2;
-  canvasCtx.strokeStyle = "rgb(0 0 0)";
-  canvasCtx.beginPath();
-  // Draw each point in the waveform
-  const sliceWidth = WIDTH / bufferLength;
-  let x = 0;
-  for (let i = 0; i < bufferLength; i++) {
-    const v = dataArray[i] / 128.0;
-    const y = v * (HEIGHT / 2);
-
-    if (i === 0) {
-      canvasCtx.moveTo(x, y);
-    } else {
-      canvasCtx.lineTo(x, y);
+const noteList = [{ id: "1", name: "A", frequency: 440 }];
+const dialog = document.querySelector("#add-note-dialog");
+const openBtn = document.querySelector("#open-modal-btn");
+const closeBtn = document.querySelector("#close-modal-btn");
+const addForm = document.querySelector("#add-note-form");
+const noteNameInput = document.querySelector("#notename-input");
+const frequencyInput = document.querySelector("#frequency-input");
+openBtn.addEventListener("click", () => {
+    dialog.showModal();
+});
+closeBtn.addEventListener("click", () => {
+    dialog.close();
+});
+addForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const noteName = noteNameInput.value;
+    const frequency = +frequencyInput.value;
+    const newNote = {
+        id: "123456790",
+        name: noteName,
+        frequency: frequency,
+    };
+    noteList.push(newNote);
+    saveToLocalStorage();
+    renderNotes();
+    addForm.reset();
+    dialog.close();
+});
+const noteCardContainer = document.querySelector(".noteCard-container");
+function renderNotes() {
+    if (noteCardContainer) {
+        noteCardContainer.replaceChildren();
     }
-
-    x += sliceWidth;
-  }
-
-  // Finish the line
-  canvasCtx.lineTo(WIDTH, HEIGHT / 2);
-  canvasCtx.stroke();
+    noteList.forEach(({ name, frequency }) => {
+        const card = document.createElement("article");
+        card.classList.add("note-card");
+        const titleElement = document.createElement("h3");
+        titleElement.textContent = name;
+        const frequencyElement = document.createElement("span");
+        frequencyElement.textContent = frequency.toString();
+        card.dataset.frequency = frequency.toString();
+        card.append(titleElement, frequencyElement);
+        if (noteCardContainer) {
+            const currentActive = document.querySelector(".note-card.active");
+            if (currentActive) {
+                currentActive.classList.remove("active");
+            }
+            card.classList.add("active");
+            noteCardContainer.append(card);
+        }
+    });
 }
-draw();
- */
-// Connect the source to be analyzed
-// source.connect(analyser);
-// Get a canvas defined with ID "oscilloscope"
+function playNoteOnce() {
+    if (noteCardContainer) {
+        noteCardContainer.addEventListener("mousedown", (e) => {
+            const target = e.target;
+            const card = target.closest(".note-card");
+            console.log(card);
+            if (!card) {
+                return;
+            }
+            const frequencyStr = card.dataset.frequency;
+            console.log(frequencyStr);
+            if (frequencyStr) {
+                const frequency = Number(frequencyStr);
+                const now = audioContext.currentTime;
+                let adsr = getADSR();
+                let noteGainAndOscillator = noteHelper.startNote(frequency, adsr);
+                let noteGain = noteGainAndOscillator[0];
+                let noteOscillator = noteGainAndOscillator[1];
+                const analyser = audioContext.createAnalyser();
+                analyserHelper.createOscilloscope(analyser);
+                noteOscillator.connect(analyser);
+                noteGain.connect(primaryGainControl);
+                noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
+            }
+        });
+    }
+}
+//playNoteOnce();
+function playNoteSustain() {
+    if (noteCardContainer) {
+        let noteOscillator;
+        let noteGain;
+        let now = 0;
+        noteCardContainer.addEventListener("mousedown", (e) => {
+            const target = e.target;
+            const card = target.closest(".note-card");
+            console.log(card);
+            if (!card) {
+                return;
+            }
+            const frequencyStr = card.dataset.frequency;
+            console.log(frequencyStr);
+            if (frequencyStr) {
+                const frequency = Number(frequencyStr);
+                let adsr = getADSR();
+                let noteGainAndOscillatorAndStartTime = noteHelper.startNote(frequency, adsr);
+                noteGain = noteGainAndOscillatorAndStartTime[0];
+                noteOscillator = noteGainAndOscillatorAndStartTime[1];
+                now = noteGainAndOscillatorAndStartTime[2];
+                const analyser = audioContext.createAnalyser();
+                analyserHelper.createOscilloscope(analyser);
+                noteOscillator.connect(analyserAll);
+                noteGain.connect(primaryGainControl);
+            }
+        });
+        window.addEventListener("mouseup", (e) => {
+            let adsr = getADSR();
+            noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
+        });
+    }
+}
+playNoteSustain();
+function getADSR() {
+    let attackTimeInput = document.querySelector("#attackTime");
+    let decayTimeInput = document.querySelector("#decayTime");
+    let sustainLevelInput = document.querySelector("#sustainLevel");
+    let releaseTimeInput = document.querySelector("#releaseTime");
+    let adsr = {
+        attackTime: +attackTimeInput.value,
+        decayTime: +decayTimeInput.value,
+        sustainLevel: +sustainLevelInput.value,
+        releaseTime: +releaseTimeInput.value,
+    };
+    return adsr;
+}
+const saveToLocalStorage = () => {
+    // Detta kallas för Serialisering: Objekt -> JSON-sträng
+    const jsonString = JSON.stringify(noteList);
+    localStorage.setItem("myNoteList", jsonString);
+};
+const loadFromLocalStorage = () => {
+    const storedData = localStorage.getItem("myNoteList");
+    if (storedData) {
+        // Detta kallas för deserialisering: JSON-sträng -> Objekt
+        const parsedData = JSON.parse(storedData); // Type Assertion (as Song[]) för att göra TypeScript glad
+        // Töm standardlistan och fyll på med den sparade
+        noteList.length = 0;
+        noteList.push(...parsedData);
+    }
+};
+loadFromLocalStorage();
+renderNotes();

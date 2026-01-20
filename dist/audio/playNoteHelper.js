@@ -1,41 +1,50 @@
 export class PlayNoteHelper {
-    startNote(audioContext, frequency, adsr) {
+    audioContext;
+    constructor(audioContext) {
+        this.audioContext = audioContext;
+    }
+    createOscillatorNode(frequency, type) {
+        const noteOscillator = this.audioContext.createOscillator();
+        noteOscillator.type = type;
+        return noteOscillator;
+    }
+    startNote(frequency, adsr) {
         console.log("Yo");
-        const now = audioContext.currentTime;
-        console.log(now);
-        const noteOscillator = audioContext.createOscillator();
-        noteOscillator.type = "sine";
+        const now = this.audioContext.currentTime;
+        let noteOscillator = this.createOscillatorNode(frequency, "sine");
         noteOscillator.frequency.setValueAtTime(frequency, now);
-        const attackTime = Number(adsr.attackTime);
-        const decayTime = Number(adsr.decayTime);
-        const sustainLevel = Number(adsr.sustainLevel);
-        const releaseTime = Number(adsr.releaseTime);
-        const duration = attackTime + decayTime + releaseTime;
-        const noteGain = audioContext.createGain();
+        const noteGain = this.audioContext.createGain();
         noteGain.gain.setValueAtTime(0, 0);
-        noteGain.gain.linearRampToValueAtTime(1, now + attackTime);
-        noteGain.gain.linearRampToValueAtTime(sustainLevel, now + attackTime + decayTime);
+        noteGain.gain.linearRampToValueAtTime(1, now + adsr.attackTime);
+        noteGain.gain.linearRampToValueAtTime(adsr.sustainLevel, now + adsr.attackTime + adsr.decayTime);
         noteOscillator.start();
         noteOscillator.connect(noteGain);
-        return [noteGain, noteOscillator];
+        return [noteGain, noteOscillator, now];
     }
-    stopNote(audioContext, noteGain, noteOscillator, adsr, noteStartTime) {
-        const nowReleased = audioContext.currentTime;
-        const attackTime = Number(adsr.attackTime);
-        const decayTime = Number(adsr.decayTime);
-        const sustainLevel = Number(adsr.sustainLevel);
-        const releaseTime = Number(adsr.releaseTime);
-        const duration = attackTime + decayTime + releaseTime;
-        if (nowReleased >= noteStartTime + attackTime + decayTime) {
+    stopNote(noteGain, noteOscillator, adsr, noteStartTime) {
+        const noteReleaseTimeNow = this.audioContext.currentTime;
+        const duration = adsr.attackTime + adsr.decayTime + adsr.releaseTime;
+        const nowAndAttackAndDecay = noteStartTime + adsr.attackTime + adsr.decayTime;
+        console.log("nowreleased: " + noteReleaseTimeNow + ", now: " + noteStartTime);
+        if (noteReleaseTimeNow >=
+            noteStartTime + adsr.attackTime + adsr.decayTime) {
             console.log("Hello");
-            console.log(nowReleased);
-            noteGain.gain.setValueAtTime(sustainLevel, nowReleased + duration - releaseTime);
-            noteGain.gain.linearRampToValueAtTime(0, nowReleased + releaseTime);
-            noteOscillator.stop(nowReleased + releaseTime + 0.1);
+            console.log(noteReleaseTimeNow);
+            /*  noteGain.gain.setValueAtTime(
+              adsr.sustainLevel,
+              noteStartTime + duration - adsr.releaseTime,
+            ); */
+            noteGain.gain.setValueAtTime(adsr.sustainLevel, 0);
+            noteGain.gain.linearRampToValueAtTime(0, noteReleaseTimeNow + adsr.releaseTime);
+            noteOscillator.stop(noteReleaseTimeNow + adsr.releaseTime);
         }
         else {
             console.log("what");
-            noteGain.gain.setValueAtTime(sustainLevel, noteStartTime + duration - releaseTime);
+            noteGain.gain.linearRampToValueAtTime(adsr.sustainLevel, noteStartTime + adsr.attackTime + adsr.decayTime);
+            /* noteGain.gain.setValueAtTime(
+              sustainLevel,
+              noteStartTime + duration - releaseTime,
+            ); */
             noteGain.gain.linearRampToValueAtTime(0, noteStartTime + duration);
             noteOscillator.stop(noteStartTime + duration);
         }

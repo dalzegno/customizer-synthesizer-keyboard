@@ -1,0 +1,7 @@
+.noteCard-container {
+  display: flex;
+  gap: 1rem;
+}
+.note-card {
+  background-color: red;
+}

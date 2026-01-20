@@ -4,10 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
+    <link rel="stylesheet" href="./src/css/style.css">
     <script type="module" src="./dist/app.js" defer></script>
   </head>
   <body>
+    <header>
+      <button id="open-modal-btn" class="btn-primary btn-icon">
+        <span class="material-symbols-outlined">add</span>
+      </button>
+    </header>
     <main>
+      <div class="noteCard-container"></div>
       <canvas id="oscilloscope" class="canvas"></canvas>
       <label for="attackTime">A</label>
       <input id="attackTime" class="attackTime" type="number" value=".2" />
@@ -18,5 +25,44 @@
       <label for="releaseTime">R</label>
       <input id="releaseTime" class="attackTime" type="number" value=".5" />
     </main>
+
+    <dialog id="add-note-dialog" class="modal">
+      <form id="add-note-form" class="modal-form">
+        <h3>New note</h3>
+         <div class="input-group">
+          <label for="notename-input">Name</label>
+          <input
+          type="text"
+          id="notename-input"
+          class="input-field"
+          required/>
+        </div>
+        <div class="input-group">
+          <label for="frequency-input">Frequency</label>
+          <input
+          type="number"
+          id="frequency-input"
+          class="input-field"
+          required/>
+        </div>
+      
+        
+       <!--  <div class="input-group"></div>
+         <div class="input-group">
+          <label for="duration-input">Längd (min:sek)</label>
+          <input
+          type="text"
+          id="duration-input"
+          class="input-field"
+          placeholder="T.ex. 3:45"
+          required/>
+        </div> -->
+          <button type="button" id="close-modal-btn" class="btn-secondary">
+            Avbryt
+          </button>
+          <button type="submit" class="btn-primary">Spara</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>
