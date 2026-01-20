@@ -1,5 +1,6 @@
 export interface Note {
-  id: string;
+  id: number;
   name: string;
   frequency: number;
+  type: string;
 }

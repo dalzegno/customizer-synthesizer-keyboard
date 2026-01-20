@@ -139,7 +139,7 @@ function createPlayNoteKeyEventLister(keyCode: string, frequency: number) {
       }
       now = audioContext.currentTime;
 
-      let noteGainAndOscillator = noteHelper.startNote(frequency, adsr);
+      let noteGainAndOscillator = noteHelper.startNote(frequency, adsr, "sine");
       noteGain = noteGainAndOscillator[0];
       noteOscillator = noteGainAndOscillator[1];
 
@@ -202,8 +202,9 @@ for (const key of keys) {
   i++;
 }
 
-const noteList: Note[] = [{ id: "1", name: "A", frequency: 440 }];
+const noteList: Note[] = [];
 
+// #region Add Note Modal
 const dialog = document.querySelector("#add-note-dialog") as HTMLDialogElement;
 const openBtn = document.querySelector("#open-modal-btn") as HTMLButtonElement;
 const closeBtn = document.querySelector(
@@ -217,6 +218,9 @@ const noteNameInput = document.querySelector(
 const frequencyInput = document.querySelector(
   "#frequency-input",
 ) as HTMLInputElement;
+const noteTypeInput = document.querySelector(
+  "#note-type-select",
+) as HTMLSelectElement;
 
 openBtn.addEventListener("click", () => {
   dialog.showModal();
@@ -231,11 +235,13 @@ addForm.addEventListener("submit", (e) => {
 
   const noteName = noteNameInput.value;
   const frequency = +frequencyInput.value;
+  const noteType = noteTypeInput.value;
 
   const newNote: Note = {
-    id: "123456790",
+    id: Date.now(),
     name: noteName,
     frequency: frequency,
+    type: noteType,
   };
 
   noteList.push(newNote);
@@ -247,15 +253,20 @@ addForm.addEventListener("submit", (e) => {
   dialog.close();
 });
 
+//#endregion
+
+//#region Render NoteList
 const noteCardContainer = document.querySelector(".noteCard-container");
 function renderNotes() {
   if (noteCardContainer) {
     noteCardContainer.replaceChildren();
   }
 
-  noteList.forEach(({ name, frequency }) => {
+  noteList.forEach(({ id, name, frequency, type }) => {
     const card = document.createElement("article");
     card.classList.add("note-card");
+
+    card.dataset.id = id.toString();
 
     const titleElement = document.createElement("h3");
     titleElement.textContent = name;
@@ -264,7 +275,26 @@ function renderNotes() {
     frequencyElement.textContent = frequency.toString();
     card.dataset.frequency = frequency.toString();
 
-    card.append(titleElement, frequencyElement);
+    const waveformElement = document.createElement("p");
+    console.log("type: " + type);
+    waveformElement.textContent = type;
+    card.dataset.waveformType = type;
+
+    const sustainCheckboxElement = document.createElement("input");
+    sustainCheckboxElement.type = "checkbox";
+    sustainCheckboxElement.classList.add("sustainInput");
+
+    const removeElement = document.createElement("button");
+    removeElement.textContent = "remove";
+    removeElement.classList.add("btn-remove-note");
+
+    card.append(
+      titleElement,
+      frequencyElement,
+      waveformElement,
+      sustainCheckboxElement,
+      removeElement,
+    );
 
     if (noteCardContainer) {
       const currentActive = document.querySelector(".note-card.active");
@@ -277,8 +307,8 @@ function renderNotes() {
     }
   });
 }
-
-function playNoteOnce() {
+//#endregion
+/* function playNoteOnce() {
   if (noteCardContainer) {
     noteCardContainer.addEventListener("mousedown", (e) => {
       const target = e.target as HTMLElement;
@@ -296,7 +326,11 @@ function playNoteOnce() {
 
         const now = audioContext.currentTime;
         let adsr = getADSR();
-        let noteGainAndOscillator = noteHelper.startNote(frequency, adsr);
+        let noteGainAndOscillator = noteHelper.startNote(
+          frequency,
+          adsr,
+          "sine",
+        );
 
         let noteGain = noteGainAndOscillator[0];
         let noteOscillator = noteGainAndOscillator[1];
@@ -311,48 +345,77 @@ function playNoteOnce() {
       }
     });
   }
-}
+} */
 //playNoteOnce();
 function playNoteSustain() {
   if (noteCardContainer) {
     let noteOscillator: OscillatorNode;
-    let noteGain: GainNode;
+    let noteGain: GainNode = audioContext.createGain();
     let now: number = 0;
+    let sustainChecked: boolean = false;
 
     noteCardContainer.addEventListener("mousedown", (e) => {
       const target = e.target as HTMLElement;
-
+      console.log(target);
       const card = target.closest(".note-card") as HTMLElement;
       console.log(card);
+
       if (!card) {
         return;
       }
+      if (target.classList.contains("btn-remove-note")) {
+        let elementToRemove = noteList.find(
+          (note) => note.id.toString() === card.dataset.id,
+        ) as Note;
+        console.log("remove: " + elementToRemove);
+        noteList.splice(noteList.indexOf(elementToRemove), 1);
+        saveToLocalStorage();
+        renderNotes();
+        return;
+      }
+
+      const sustainCheckboxElement = card.querySelector(
+        ".sustainInput",
+      ) as HTMLInputElement;
+
+      console.log("helloooo: " + sustainCheckboxElement);
 
       const frequencyStr = card.dataset.frequency;
+      const waveformType = card.dataset.waveformType;
       console.log(frequencyStr);
-      if (frequencyStr) {
+      if (frequencyStr && waveformType) {
         const frequency = Number(frequencyStr);
 
         let adsr = getADSR();
         let noteGainAndOscillatorAndStartTime = noteHelper.startNote(
           frequency,
           adsr,
+          waveformType,
         );
 
         noteGain = noteGainAndOscillatorAndStartTime[0];
         noteOscillator = noteGainAndOscillatorAndStartTime[1];
         now = noteGainAndOscillatorAndStartTime[2];
 
-        const analyser = audioContext.createAnalyser();
-        analyserHelper.createOscilloscope(analyser);
+        //const analyser = audioContext.createAnalyser();
+        //analyserHelper.createOscilloscope(analyser);
 
         noteOscillator.connect(analyserAll);
         noteGain.connect(primaryGainControl);
+
+        sustainChecked = sustainCheckboxElement.checked;
+        if (!sustainChecked) {
+          noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
+          return;
+        }
       }
     });
+
     window.addEventListener("mouseup", (e) => {
-      let adsr = getADSR();
-      noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
+      if (sustainChecked) {
+        let adsr = getADSR();
+        noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
+      }
     });
   }
 }

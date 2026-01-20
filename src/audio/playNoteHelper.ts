@@ -16,10 +16,11 @@ export class PlayNoteHelper {
   startNote(
     frequency: number,
     adsr: ADSR,
+    waveformType: string,
   ): [GainNode, OscillatorNode, startTime: number] {
     console.log("Yo");
     const now = this.audioContext.currentTime;
-    let noteOscillator = this.createOscillatorNode(frequency, "sine");
+    let noteOscillator = this.createOscillatorNode(frequency, waveformType);
     noteOscillator.frequency.setValueAtTime(frequency, now);
     const noteGain = this.audioContext.createGain();
     noteGain.gain.setValueAtTime(0, 0);
