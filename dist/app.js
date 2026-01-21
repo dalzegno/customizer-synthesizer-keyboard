@@ -1,11 +1,15 @@
-import { Analyser } from "./analyser/analyserHelper.js";
-import { PlayNoteHelper } from "./audio/playNoteHelper.js";
+import { AnalyserService } from "./services/analyserService.js";
+import { PlayNoteService } from "./services/playNoteService.js";
+import { renderNotes } from "./components/noteList.js";
+import { saveNotes } from "./utils/storage.js";
+import { ratiosJustIntonation } from "./models/tuningRatios.js";
+import { getNoteList, getNoteListFromLocalStorage, } from "./services/NoteService.js";
+import { loadAddNoteModal } from "./components/addNoteModal.js";
 //#region Load Audio Context stuff
 const audioContext = new AudioContext();
-const analyserHelper = new Analyser();
-const noteHelper = new PlayNoteHelper(audioContext);
+const analyserHelper = new AnalyserService();
+const noteHelper = new PlayNoteService(audioContext);
 const SAMPLE_RATE = audioContext.sampleRate;
-console.log(SAMPLE_RATE);
 const timeLength = 1; // measured in seconds
 const buffer = audioContext.createBuffer(1, SAMPLE_RATE * timeLength, SAMPLE_RATE);
 const channelData = buffer.getChannelData(0);
@@ -17,98 +21,29 @@ const primaryGainControl = audioContext.createGain();
 primaryGainControl.gain.setValueAtTime(0.5, 0);
 primaryGainControl.connect(audioContext.destination);
 //#endregion
-/*
-
-
-*/
-//#region intro
-/*
-const whiteNoiseSource = audioContext.createBufferSource();
-whiteNoiseSource.buffer = buffer;
-
-
-whiteNoiseSource.connect(primaryGainControl);
-const button = document.createElement("button");
-button.innerText = "White Noise";
-
-button.addEventListener("click", () => {
-  const whiteNoiseSource = audioContext.createBufferSource();
-  whiteNoiseSource.buffer = buffer;
-  whiteNoiseSource.connect(primaryGainControl);
-
-  whiteNoiseSource.start();
-});
-
-document.body.appendChild(button);
-/*
-document.body.addEventListener("keyup", (e) => {
-  if (e.code === "KeyQ") {
-    const whiteNoiseSource = audioContext.createBufferSource();
-    whiteNoiseSource.buffer = buffer;
-    whiteNoiseSource.connect(primaryGainControl);
-
-    whiteNoiseSource.start();
-  }
-}); */
-/*
-const snareFilter = audioContext.createBiquadFilter();
-snareFilter.type = "highpass";
-snareFilter.frequency.value = 1500; // Measured in Hz
-snareFilter.connect(primaryGainControl);
-
-// ...
-const snareButton = document.createElement("button");
-snareButton.innerText = "Snare";
-snareButton.addEventListener("click", () => {
-  const whiteNoiseSource = audioContext.createBufferSource();
-  whiteNoiseSource.buffer = buffer;
-  whiteNoiseSource.connect(snareFilter);
-
-  whiteNoiseSource.start();
-});
-document.body.appendChild(snareButton);
-
-const kickButton = document.createElement("button");
-kickButton.innerText = "Kick";
-kickButton.addEventListener("click", () => {
-  const kickOscillator = audioContext.createOscillator();
-  // Frequency in Hz. This corresponds to a C note.
-  kickOscillator.frequency.setValueAtTime(442, 0);
-  kickOscillator.connect(primaryGainControl);
-  kickOscillator.start();
-});
-document.body.appendChild(kickButton);
-*/
-//#endregion
-/*
-
-
-*/
+//initiation
+let noteList = [];
+const apiNotes = getNoteList();
+const storedNotes = getNoteListFromLocalStorage();
+if (storedNotes.length > 0) {
+    noteList.push(...storedNotes);
+}
+else {
+    noteList.push(...apiNotes);
+    saveNotes(noteList);
+}
+renderNotes("#noteCard-container", noteList);
+loadAddNoteModal(noteList);
 const analyserAll = audioContext.createAnalyser();
 analyserHelper.createOscilloscope(analyserAll);
 function createPlayNoteKeyEventLister(keyCode, frequency) {
-    let attackTimeInput = document.querySelector("#attackTime");
-    let decayTimeInput = document.querySelector("#decayTime");
-    let sustainLevelInput = document.querySelector("#sustainLevel");
-    let releaseTimeInput = document.querySelector("#releaseTime");
-    let adsr = {
-        attackTime: +attackTimeInput.value,
-        decayTime: +decayTimeInput.value,
-        sustainLevel: +sustainLevelInput.value,
-        releaseTime: +releaseTimeInput.value,
-    };
     const analyser = audioContext.createAnalyser();
     analyserHelper.createOscilloscope(analyser);
     let noteGain = audioContext.createGain();
     let noteOscillator = audioContext.createOscillator();
     let now = audioContext.currentTime;
     document.body.addEventListener("keydown", (e) => {
-        let adsr = {
-            attackTime: +attackTimeInput.value,
-            decayTime: +decayTimeInput.value,
-            sustainLevel: +sustainLevelInput.value,
-            releaseTime: +releaseTimeInput.value,
-        };
+        let adsr = getADSR();
         if (e.code === keyCode) {
             if (e.repeat) {
                 return;
@@ -123,12 +58,7 @@ function createPlayNoteKeyEventLister(keyCode, frequency) {
         }
     });
     document.body.addEventListener("keyup", (e) => {
-        let adsr = {
-            attackTime: +attackTimeInput.value,
-            decayTime: +decayTimeInput.value,
-            sustainLevel: +sustainLevelInput.value,
-            releaseTime: +releaseTimeInput.value,
-        };
+        let adsr = getADSR();
         if (e.code === keyCode) {
             noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
         }
@@ -149,165 +79,40 @@ const keys = [
     "KeyS",
     "KeyD",
 ];
-//just intonation ratios
-const ratios = [
-    1,
-    (1 / 15) * 16,
-    (1 / 8) * 9,
-    (1 / 5) * 6,
-    (1 / 4) * 5,
-    (1 / 3) * 4,
-    (1 / 32) * 45,
-    (1 / 2) * 3,
-    (1 / 5) * 8,
-    (1 / 3) * 5,
-    (1 / 5) * 9,
-    (1 / 8) * 15,
-    1 * 2,
-];
 let startFrequency = 216;
 let i = 0;
 for (const key of keys) {
-    let frequency = startFrequency * ratios[i];
+    let frequency = startFrequency * ratiosJustIntonation[i];
     createPlayNoteKeyEventLister(key, frequency);
     i++;
 }
-const noteList = [];
 // #region Add Note Modal
-const dialog = document.querySelector("#add-note-dialog");
-const openBtn = document.querySelector("#open-modal-btn");
-const closeBtn = document.querySelector("#close-modal-btn");
-const addForm = document.querySelector("#add-note-form");
-const noteNameInput = document.querySelector("#notename-input");
-const frequencyInput = document.querySelector("#frequency-input");
-const noteTypeInput = document.querySelector("#note-type-select");
-openBtn.addEventListener("click", () => {
-    dialog.showModal();
-});
-closeBtn.addEventListener("click", () => {
-    dialog.close();
-});
-addForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const noteName = noteNameInput.value;
-    const frequency = +frequencyInput.value;
-    const noteType = noteTypeInput.value;
-    const newNote = {
-        id: Date.now(),
-        name: noteName,
-        frequency: frequency,
-        type: noteType,
-    };
-    noteList.push(newNote);
-    saveToLocalStorage();
-    renderNotes();
-    addForm.reset();
-    dialog.close();
-});
 //#endregion
 //#region Render NoteList
+renderNotes("#noteCard-container", noteList);
 const noteCardContainer = document.querySelector(".noteCard-container");
-function renderNotes() {
-    if (noteCardContainer) {
-        noteCardContainer.replaceChildren();
-    }
-    noteList.forEach(({ id, name, frequency, type }) => {
-        const card = document.createElement("article");
-        card.classList.add("note-card");
-        card.dataset.id = id.toString();
-        const titleElement = document.createElement("h3");
-        titleElement.textContent = name;
-        const frequencyElement = document.createElement("span");
-        frequencyElement.textContent = frequency.toString();
-        card.dataset.frequency = frequency.toString();
-        const waveformElement = document.createElement("p");
-        console.log("type: " + type);
-        waveformElement.textContent = type;
-        card.dataset.waveformType = type;
-        const sustainCheckboxElement = document.createElement("input");
-        sustainCheckboxElement.type = "checkbox";
-        sustainCheckboxElement.classList.add("sustainInput");
-        const removeElement = document.createElement("button");
-        removeElement.textContent = "remove";
-        removeElement.classList.add("btn-remove-note");
-        card.append(titleElement, frequencyElement, waveformElement, sustainCheckboxElement, removeElement);
-        if (noteCardContainer) {
-            const currentActive = document.querySelector(".note-card.active");
-            if (currentActive) {
-                currentActive.classList.remove("active");
-            }
-            card.classList.add("active");
-            noteCardContainer.append(card);
-        }
-    });
-}
-//#endregion
-/* function playNoteOnce() {
-  if (noteCardContainer) {
-    noteCardContainer.addEventListener("mousedown", (e) => {
-      const target = e.target as HTMLElement;
-
-      const card = target.closest(".note-card") as HTMLElement;
-      console.log(card);
-      if (!card) {
-        return;
-      }
-
-      const frequencyStr = card.dataset.frequency;
-      console.log(frequencyStr);
-      if (frequencyStr) {
-        const frequency = Number(frequencyStr);
-
-        const now = audioContext.currentTime;
-        let adsr = getADSR();
-        let noteGainAndOscillator = noteHelper.startNote(
-          frequency,
-          adsr,
-          "sine",
-        );
-
-        let noteGain = noteGainAndOscillator[0];
-        let noteOscillator = noteGainAndOscillator[1];
-
-        const analyser = audioContext.createAnalyser();
-        analyserHelper.createOscilloscope(analyser);
-
-        noteOscillator.connect(analyser);
-        noteGain.connect(primaryGainControl);
-
-        noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
-      }
-    });
-  }
-} */
-//playNoteOnce();
 function playNoteSustain() {
     if (noteCardContainer) {
         let noteOscillator;
-        let noteGain = audioContext.createGain();
+        let noteGain;
         let now = 0;
         let sustainChecked = false;
         noteCardContainer.addEventListener("mousedown", (e) => {
             const target = e.target;
-            console.log(target);
             const card = target.closest(".note-card");
-            console.log(card);
             if (!card) {
                 return;
             }
             if (target.classList.contains("btn-remove-note")) {
                 let elementToRemove = noteList.find((note) => note.id.toString() === card.dataset.id);
-                console.log("remove: " + elementToRemove);
                 noteList.splice(noteList.indexOf(elementToRemove), 1);
-                saveToLocalStorage();
-                renderNotes();
+                saveNotes(noteList);
+                renderNotes("#noteCard-container", noteList);
                 return;
             }
             const sustainCheckboxElement = card.querySelector(".sustainInput");
-            console.log("helloooo: " + sustainCheckboxElement);
             const frequencyStr = card.dataset.frequency;
             const waveformType = card.dataset.waveformType;
-            console.log(frequencyStr);
             if (frequencyStr && waveformType) {
                 const frequency = Number(frequencyStr);
                 let adsr = getADSR();
@@ -348,20 +153,3 @@ function getADSR() {
     };
     return adsr;
 }
-const saveToLocalStorage = () => {
-    // Detta kallas för Serialisering: Objekt -> JSON-sträng
-    const jsonString = JSON.stringify(noteList);
-    localStorage.setItem("myNoteList", jsonString);
-};
-const loadFromLocalStorage = () => {
-    const storedData = localStorage.getItem("myNoteList");
-    if (storedData) {
-        // Detta kallas för deserialisering: JSON-sträng -> Objekt
-        const parsedData = JSON.parse(storedData); // Type Assertion (as Song[]) för att göra TypeScript glad
-        // Töm standardlistan och fyll på med den sparade
-        noteList.length = 0;
-        noteList.push(...parsedData);
-    }
-};
-loadFromLocalStorage();
-renderNotes();

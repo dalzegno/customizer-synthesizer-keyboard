@@ -1,4 +1,4 @@
-export class PlayNoteHelper {
+export class PlayNoteService {
     audioContext;
     constructor(audioContext) {
         this.audioContext = audioContext;

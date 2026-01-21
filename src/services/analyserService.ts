@@ -1,4 +1,4 @@
-export class Analyser {
+export class AnalyserService {
   createOscilloscope(analyser: AnalyserNode) {
     analyser.fftSize = 2048;
 

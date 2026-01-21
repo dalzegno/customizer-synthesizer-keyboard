@@ -1,6 +1,6 @@
-import { ADSR } from "../interfaces/ADSR";
+import { ADSR } from "../models/ADSR";
 
-export class PlayNoteHelper {
+export class PlayNoteService {
   private audioContext: AudioContext;
   constructor(audioContext: AudioContext) {
     this.audioContext = audioContext;
@@ -18,7 +18,6 @@ export class PlayNoteHelper {
     adsr: ADSR,
     waveformType: string,
   ): [GainNode, OscillatorNode, startTime: number] {
-    console.log("Yo");
     const now = this.audioContext.currentTime;
     let noteOscillator = this.createOscillatorNode(frequency, waveformType);
     noteOscillator.frequency.setValueAtTime(frequency, now);
@@ -48,17 +47,10 @@ export class PlayNoteHelper {
     const nowAndAttackAndDecay =
       noteStartTime + adsr.attackTime + adsr.decayTime;
 
-    console.log(
-      "nowreleased: " + noteReleaseTimeNow + ", now: " + noteStartTime,
-    );
-
     if (
       noteReleaseTimeNow >=
       noteStartTime + adsr.attackTime + adsr.decayTime
     ) {
-      console.log("Hello");
-      console.log(noteReleaseTimeNow);
-
       /*  noteGain.gain.setValueAtTime(
         adsr.sustainLevel,
         noteStartTime + duration - adsr.releaseTime,
@@ -70,7 +62,6 @@ export class PlayNoteHelper {
       );
       noteOscillator.stop(noteReleaseTimeNow + adsr.releaseTime);
     } else {
-      console.log("what");
       noteGain.gain.linearRampToValueAtTime(
         adsr.sustainLevel,
         noteStartTime + adsr.attackTime + adsr.decayTime,
