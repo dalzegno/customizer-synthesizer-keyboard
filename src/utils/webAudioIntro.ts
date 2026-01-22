@@ -1,9 +1,6 @@
 /* 
 const audioContext = new AudioContext();
 
-const analyserHelper = new AnalyserService();
-const noteHelper = new PlayNoteService(audioContext);
-
 const SAMPLE_RATE = audioContext.sampleRate;
 const timeLength = 1; // measured in seconds
 
@@ -20,8 +17,8 @@ for (let i = 0; i < buffer.length; i++) {
 const primaryGainControl = audioContext.createGain();
 primaryGainControl.gain.setValueAtTime(0.5, 0);
 primaryGainControl.connect(audioContext.destination);
-const whiteNoiseSource = audioContext.createBufferSource();
 
+const whiteNoiseSource = audioContext.createBufferSource();
 whiteNoiseSource.buffer = buffer;
 
 
@@ -70,7 +67,7 @@ const kickButton = document.createElement("button");
 kickButton.innerText = "Kick";
 kickButton.addEventListener("click", () => {
   const kickOscillator = audioContext.createOscillator();
-  // Frequency in Hz. This corresponds to a C note.
+  // Frequency in Hz. This corresponds to a A note.
   kickOscillator.frequency.setValueAtTime(442, 0);
   kickOscillator.connect(primaryGainControl);
   kickOscillator.start();
