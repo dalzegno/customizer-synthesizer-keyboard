@@ -86,8 +86,6 @@ for (const key of keys) {
     createPlayNoteKeyEventLister(key, frequency);
     i++;
 }
-// #region Add Note Modal
-//#endregion
 //#region Render NoteList
 renderNotes("#noteCard-container", noteList);
 const noteCardContainer = document.querySelector(".noteCard-container");
