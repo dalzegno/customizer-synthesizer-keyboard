@@ -47,6 +47,7 @@ export const createNoteWithFrequencySlider = (audioContext: AudioContext) => {
       gainNode.gain.setValueAtTime(0, 0);
       gainNode.gain.linearRampToValueAtTime(maxGainVolume, now + 0.2);
       oscillatorNode = audioContext.createOscillator();
+      oscillatorNode.type = <OscillatorType>waveformTypeSelect.value;
       oscillatorNode.connect(gainNode);
       gainNode.connect(audioContext.destination);
 
@@ -76,5 +77,6 @@ export const createNoteWithFrequencySlider = (audioContext: AudioContext) => {
     frequencyLabel,
     frequencySlider,
   );
+
   document.body.prepend(container);
 };

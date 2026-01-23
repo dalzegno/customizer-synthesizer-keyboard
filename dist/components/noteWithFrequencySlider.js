@@ -37,6 +37,7 @@ export const createNoteWithFrequencySlider = (audioContext) => {
             gainNode.gain.setValueAtTime(0, 0);
             gainNode.gain.linearRampToValueAtTime(maxGainVolume, now + 0.2);
             oscillatorNode = audioContext.createOscillator();
+            oscillatorNode.type = waveformTypeSelect.value;
             oscillatorNode.connect(gainNode);
             gainNode.connect(audioContext.destination);
             let frequencySliderValue = Number(frequencySlider.value);
