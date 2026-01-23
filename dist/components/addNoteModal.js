@@ -17,7 +17,7 @@ export const loadAddNoteModal = (noteList) => {
     addForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const noteName = noteNameInput.value;
-        const frequency = +frequencyInput.value;
+        const frequency = Number(frequencyInput.value);
         const waveformType = waveformTypeInput.value;
         const newNote = {
             id: Date.now(),

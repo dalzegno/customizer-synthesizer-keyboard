@@ -2,9 +2,10 @@ import { AnalyserService } from "./services/analyserService.js";
 import { PlayNoteService } from "./services/playNoteService.js";
 import { renderNotes } from "./components/noteList.js";
 import { saveNotes } from "./utils/storage.js";
-import { ratiosJustIntonation } from "./models/tuningRatios.js";
+import { centsFromStartFrequency_JustIntonation, ratiosJustIntonation, } from "./models/TuningRatios.js";
 import { getNoteList, getNoteListFromLocalStorage, } from "./services/NoteService.js";
 import { loadAddNoteModal } from "./components/addNoteModal.js";
+import { createNoteWithFrequencySlider } from "./components/NoteWithFrequencySlider.js";
 //#region Load Audio Context stuff
 const audioContext = new AudioContext();
 const analyserHelper = new AnalyserService();
@@ -20,6 +21,7 @@ for (let i = 0; i < buffer.length; i++) {
 const primaryGainControl = audioContext.createGain();
 primaryGainControl.gain.setValueAtTime(0.5, 0);
 primaryGainControl.connect(audioContext.destination);
+createNoteWithFrequencySlider(audioContext);
 //#endregion
 //initiation
 let noteList = [];
@@ -36,7 +38,7 @@ renderNotes("#noteCard-container", noteList);
 loadAddNoteModal(noteList);
 const analyserAll = audioContext.createAnalyser();
 analyserHelper.createOscilloscope(analyserAll);
-function createPlayNoteKeyEventLister(keyCode, frequency) {
+function createPlayNoteKeyEventLister(keyCode, frequency, i) {
     const analyser = audioContext.createAnalyser();
     analyserHelper.createOscilloscope(analyser);
     let noteGain = audioContext.createGain();
@@ -52,6 +54,10 @@ function createPlayNoteKeyEventLister(keyCode, frequency) {
             let noteGainAndOscillator = noteHelper.startNote(frequency, adsr, "sine");
             noteGain = noteGainAndOscillator[0];
             noteOscillator = noteGainAndOscillator[1];
+            if (i) {
+                //detune tunes by cents
+                noteOscillator.detune.value = centsFromStartFrequency_JustIntonation[i];
+            }
             noteOscillator.connect(analyser);
             noteOscillator.connect(analyserAll);
             noteGain.connect(primaryGainControl);
@@ -83,7 +89,9 @@ let startFrequency = 216;
 let i = 0;
 for (const key of keys) {
     let frequency = startFrequency * ratiosJustIntonation[i];
-    createPlayNoteKeyEventLister(key, frequency);
+    //createPlayNoteKeyEventLister(key, frequency);
+    //Tune with cents
+    createPlayNoteKeyEventLister(key, startFrequency, i);
     i++;
 }
 //#region Render NoteList

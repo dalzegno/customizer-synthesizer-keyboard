@@ -36,7 +36,7 @@ export const loadAddNoteModal = (noteList: Note[]) => {
     e.preventDefault();
 
     const noteName = noteNameInput.value;
-    const frequency = +frequencyInput.value;
+    const frequency = Number(frequencyInput.value);
     const waveformType = waveformTypeInput.value;
 
     const newNote: Note = {

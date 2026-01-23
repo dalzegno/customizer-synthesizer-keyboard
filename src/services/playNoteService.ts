@@ -6,7 +6,7 @@ export class PlayNoteService {
     this.audioContext = audioContext;
   }
 
-  createOscillatorNode(frequency: number, type: string): OscillatorNode {
+  createOscillatorNode(type: string): OscillatorNode {
     const noteOscillator = this.audioContext.createOscillator();
     noteOscillator.type = <OscillatorType>type;
 
@@ -19,7 +19,7 @@ export class PlayNoteService {
     waveformType: string,
   ): [GainNode, OscillatorNode, startTime: number] {
     const now = this.audioContext.currentTime;
-    let noteOscillator = this.createOscillatorNode(frequency, waveformType);
+    let noteOscillator = this.createOscillatorNode(waveformType);
     noteOscillator.frequency.setValueAtTime(frequency, now);
     const noteGain = this.audioContext.createGain();
     noteGain.gain.setValueAtTime(0, 0);

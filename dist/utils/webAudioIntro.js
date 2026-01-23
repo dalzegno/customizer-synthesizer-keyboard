@@ -1,5 +1,24 @@
 "use strict";
 /*
+const audioContext = new AudioContext();
+
+const SAMPLE_RATE = audioContext.sampleRate;
+const timeLength = 1; // measured in seconds
+
+const buffer = audioContext.createBuffer(
+  1,
+  SAMPLE_RATE * timeLength,
+  SAMPLE_RATE,
+);
+const channelData = buffer.getChannelData(0);
+// Float32Array {0: 0, 1: 0, ...}
+for (let i = 0; i < buffer.length; i++) {
+  channelData[i] = Math.random() * 2 - 1;
+}
+const primaryGainControl = audioContext.createGain();
+primaryGainControl.gain.setValueAtTime(0.5, 0);
+primaryGainControl.connect(audioContext.destination);
+
 const whiteNoiseSource = audioContext.createBufferSource();
 whiteNoiseSource.buffer = buffer;
 
@@ -49,7 +68,7 @@ const kickButton = document.createElement("button");
 kickButton.innerText = "Kick";
 kickButton.addEventListener("click", () => {
   const kickOscillator = audioContext.createOscillator();
-  // Frequency in Hz. This corresponds to a C note.
+  // Frequency in Hz. This corresponds to a A note.
   kickOscillator.frequency.setValueAtTime(442, 0);
   kickOscillator.connect(primaryGainControl);
   kickOscillator.start();
