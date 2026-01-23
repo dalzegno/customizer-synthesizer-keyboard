@@ -4,18 +4,19 @@ export const createNoteWithFrequencySlider = (audioContext: AudioContext) => {
 
   let gainNode: GainNode = audioContext.createGain();
   let oscillatorNode: OscillatorNode = audioContext.createOscillator();
+  let maxGainVolume = 0.5;
 
   const container = document.createElement("article");
-  container.style.backgroundColor = "grey";
+  container.style.backgroundColor = "orangered";
 
   const frequencySlider = document.createElement("input") as HTMLInputElement;
   frequencySlider.classList.add("frequency-slider");
   frequencySlider.type = "range";
   frequencySlider.max = "20000";
   frequencySlider.min = "0";
-  frequencySlider.value = "440";
+  frequencySlider.value = "432";
   frequencySlider.width = 100;
-  frequencySlider.style.width = "100%";
+  frequencySlider.style.width = "90%";
   const frequencyLabel = document.createElement("p") as HTMLElement;
   frequencyLabel.textContent = `frequency: ${frequencySlider.value}Hz`;
 
@@ -35,24 +36,30 @@ export const createNoteWithFrequencySlider = (audioContext: AudioContext) => {
 
   const btnPlay = document.createElement("button");
   btnPlay.textContent = "paused";
+
   btnPlay.onclick = () => {
+    const now = audioContext.currentTime;
     if (status === "paused") {
+      status = "playing";
+      btnPlay.textContent = "playing";
+
       gainNode = audioContext.createGain();
-      gainNode.gain.setValueAtTime(0.5, 0);
+      gainNode.gain.setValueAtTime(0, 0);
+      gainNode.gain.linearRampToValueAtTime(maxGainVolume, now + 0.2);
       oscillatorNode = audioContext.createOscillator();
       oscillatorNode.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      status = "playing";
-      const now = audioContext.currentTime;
+
       let frequencySliderValue = Number(frequencySlider.value);
-      btnPlay.textContent = "playing";
-      gainNode.gain.setValueAtTime(1, 0);
+
       oscillatorNode.frequency.setValueAtTime(frequencySliderValue, now);
       oscillatorNode.start();
     } else {
       status = "paused";
       btnPlay.textContent = "paused";
-      oscillatorNode.stop();
+      gainNode.gain.setValueAtTime(maxGainVolume, 0);
+      gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+      oscillatorNode.stop(now + 0.1);
     }
   };
 
