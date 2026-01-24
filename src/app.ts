@@ -22,6 +22,9 @@ const audioContext = new AudioContext();
 const analyserHelper = new AnalyserService();
 const noteHelper = new PlayNoteService(audioContext);
 
+const analyserAll = audioContext.createAnalyser();
+analyserHelper.createOscilloscope(analyserAll);
+
 const SAMPLE_RATE = audioContext.sampleRate;
 const timeLength = 1; // measured in seconds
 
@@ -39,7 +42,10 @@ const primaryGainControl = audioContext.createGain();
 primaryGainControl.gain.setValueAtTime(0.5, 0);
 primaryGainControl.connect(audioContext.destination);
 
-createNoteWithFrequencySlider(audioContext);
+//frequency-slider thingy
+//createNoteWithFrequencySlider(audioContext);
+//frequency-slider thingy with analyser wave drawing
+createNoteWithFrequencySlider(audioContext, analyserAll);
 
 //#endregion
 //initiation
@@ -59,9 +65,7 @@ renderNotes("#noteCard-container", noteList);
 
 loadAddNoteModal(noteList);
 
-const analyserAll = audioContext.createAnalyser();
-analyserHelper.createOscilloscope(analyserAll);
-
+/* 
 function createPlayNoteKeyEventLister(
   keyCode: string,
   frequency: number,
@@ -87,7 +91,7 @@ function createPlayNoteKeyEventLister(
       noteOscillator = noteGainAndOscillator[1];
 
       if (i) {
-        //detune tunes by cents
+        //detune.value tunes by cents
         noteOscillator.detune.value = centsFromStartFrequency_JustIntonation[i];
       }
 
@@ -131,7 +135,8 @@ for (const key of keys) {
   //Tune with cents
   createPlayNoteKeyEventLister(key, startFrequency, i);
   i++;
-}
+} 
+*/
 
 //#region Render NoteList
 
@@ -152,6 +157,7 @@ function playNoteSustain() {
       if (!card) {
         return;
       }
+
       if (target.classList.contains("btn-remove-note")) {
         let elementToRemove = noteList.find(
           (note) => note.id.toString() === card.dataset.id,
@@ -159,6 +165,9 @@ function playNoteSustain() {
         noteList.splice(noteList.indexOf(elementToRemove), 1);
         saveNotes(noteList);
         renderNotes("#noteCard-container", noteList);
+        return;
+      }
+      if (!target.classList.contains("note-play-area")) {
         return;
       }
 
@@ -199,6 +208,7 @@ function playNoteSustain() {
 
     window.addEventListener("mouseup", (e) => {
       if (sustainChecked) {
+        console.log("hello");
         let adsr = getADSR();
         noteHelper.stopNote(noteGain, noteOscillator, adsr, now);
       }
